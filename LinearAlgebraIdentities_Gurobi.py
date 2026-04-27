@@ -257,14 +257,20 @@ def setup_inverse_triple_product(m, n):
 
 if __name__ == "__main__":
     os.makedirs('Solutions', exist_ok=True)
-    run_check("(A+B)^T = A^T + B^T", 3, setup_transpose_sum)
+
+    run_check("A * A^-1 = I", 2, setup_inverse_identity)
     run_check("(A^-1)^-1 = A", 2, setup_inverse_inverse)
     run_check("(A*B)^-1 = B^-1 * A^-1", 2, setup_inverse_product)
     run_check("(A*B*C)^-1 = C^-1 * B^-1 * A^-1", 2, setup_inverse_triple_product)
+
+    run_check("A(BC) = (AB)C", 2, setup_associativity)
+    run_check("A(BC) = (AB)C", 3, setup_associativity)
+
+    run_check("det(A*B) = det(A) * det(B)", 2, setup_det_product)
+    run_check("det(A^-1) = 1/det(A)", 2, setup_det_inverse)
+
+    run_check("A(B+C) = AB + AC", 5, setup_distributivity)
+
+    run_check("(A+B)^T = A^T + B^T", 3, setup_transpose_sum)
     run_check("(A*B)^T = B^T * A^T", 3, setup_transpose_product)
     run_check("(A^T)^-1 = (A^-1)^T", 2, setup_transpose_inverse)
-    run_check("A * A^-1 = I", 2, setup_inverse_identity)
-    run_check("det(A*B) = det(A) * det(B)", 3, setup_det_product)
-    run_check("det(A^-1) = 1/det(A)", 2, setup_det_inverse)
-    run_check("A(BC) = (AB)C", 2, setup_associativity)
-    run_check("A(B+C) = AB + AC", 5, setup_distributivity)
