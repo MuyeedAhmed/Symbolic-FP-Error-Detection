@@ -6,17 +6,18 @@ This project explores floating-point error detection in linear algebra identitie
 
 | Identity | Solution? | Time (s) | Size of N |
 | :--- | :--- | :--- | :--- |
-| `A * A^-1 = I` |  Yes | 7.48 | 2 |
-| `(A^-1)^-1 = A` | Yes | 0.06 | 2 |
-| `(A*B)^-1 = B^-1 * A^-1` | Yes | 8.4 | 2 |
+| `A * A^-1 = I`                    | Yes | 7.48 | 2 |
+| `(A^-1)^-1 = A`                   | Yes | 0.06 | 2 |
+| `(A*B)^-1 = B^-1 * A^-1`          | Yes | 8.4 | 2 |
 | `(A*B*C)^-1 = C^-1 * B^-1 * A^-1` | | | |
-| `A(BC) = (AB)C` | Yes | 0.33 | 2,3 |
-| `det(A*B) = det(A) * det(B)` | Yes | 0.48 | 2,3 |
-| `det(A^-1) = 1/det(A)` | Yes | 0.74 | 2 |
-| `A(B+C) = AB + AC` | | | |
-| `(A+B)^T = A^T + B^T` | No | | |
-| `(A*B)^T = B^T * A^T` | | | |
-| `(A^T)^-1 = (A^-1)^T` | No | | |
+| `A(BC) = (AB)C`                   | Yes | 0.33 | 2,3 |
+| `det(A*B) = det(A) * det(B)`      | No | | |
+| `det(A^-1) = 1/det(A)`            | Yes | 0.74 | 2 |
+<!-- | `A(B+C) = AB + AC`                | Yes | 28.99 | 5 | -->
+| `A(B+C) = AB + AC`                | | | |
+| `(A+B)^T = A^T + B^T`             | No | | |
+| `(A*B)^T = B^T * A^T`             | No | | |
+| `(A^T)^-1 = (A^-1)^T`             | No | | |
 
 ## Matrix Identities - Z3
 
