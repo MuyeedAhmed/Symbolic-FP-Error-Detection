@@ -148,7 +148,7 @@ def run_check(name, n, setup_fn):
             'LHS': get_vals(LHS, n),
             'RHS': get_vals(RHS, n)
         }
-        file_name = f'solutions/solution_{name.replace(" ", "_").replace("*", "x").replace("^", "").replace("(", "").replace(")", "").replace("/", "_")}.pkl'
+        file_name = f'Solutions/Gurobi_Solution_{name.replace(" ", "_").replace("*", "x").replace("^", "").replace("(", "").replace(")", "").replace("/", "_")}.pkl'
         with open(file_name, 'wb') as f:
             pickle.dump(res_data, f)
         verify_identity(name, res_data, n)
@@ -256,6 +256,7 @@ def setup_inverse_triple_product(m, n):
     return {"A": A, "B": B, "C": C}, LHS, RHS
 
 if __name__ == "__main__":
+    os.makedirs('Solutions', exist_ok=True)
     run_check("(A+B)^T = A^T + B^T", 3, setup_transpose_sum)
     run_check("(A^-1)^-1 = A", 2, setup_inverse_inverse)
     run_check("(A*B)^-1 = B^-1 * A^-1", 2, setup_inverse_product)
