@@ -27,9 +27,8 @@ def verify_identity(name, data, n):
     print("-" * 40)
 
 def main():
-    solution_files = glob.glob("solutions/*.pkl")
+    solution_files = glob.glob("Solutions/*.pkl")
     if not solution_files:
-        print("No solution files found in 'solutions/' directory.")
         return
 
     for file_path in solution_files:
