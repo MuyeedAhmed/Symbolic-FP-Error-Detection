@@ -1,6 +1,31 @@
 from z3 import *
 import numpy as np
 import time
+import pickle
+import os
+import pandas as pd
+
+
+def verify_identity(name, data, n):
+    print(f"--- Verifying with NumPy (N={n}): {name} ---")
+    LHS_val = np.array(data['LHS'])
+    RHS_val = np.array(data['RHS'])
+    
+    diff = LHS_val - RHS_val
+    if isinstance(diff, np.ndarray):
+        max_diff = np.max(np.abs(diff))
+    else:
+        max_diff = np.abs(diff)
+        
+    print(f"Max Difference: {max_diff}")
+    match = "Yes"
+    if max_diff > 1e-7:
+        print("Counter-example confirmed by NumPy.")
+        match = "No"
+    else:
+        print("NumPy agrees with the identity (within tolerance).")
+        match = "Yes"
+    return match, max_diff
 
 
 def matmul_sym(M1, M2, fp=True, rm=None):
@@ -74,7 +99,20 @@ def identity_sym(N, fp=True, rm=None, fp_sort=None):
                 res[i][j] = fpRealToFP(rm, RealVal(0.0), fp_sort) if fp else 0.0
     return res
 
-def check_identity(name, solver_cond, matrices, LHS_sym=None, RHS_sym=None, timeout=1800000):
+def trace_sym(M, fp=True, rm=None):
+    n = len(M)
+    s = None
+    for i in range(n):
+        term = M[i][i]
+        if s is None: s = term
+        else: s = fpAdd(rm, s, term) if fp else s + term
+    return s
+
+def scalar_mul_sym(k, M, fp=True, rm=None):
+    n, m = len(M), len(M[0])
+    return [[(fpMul(rm, k, M[i][j]) if fp else k * M[i][j]) for j in range(m)] for i in range(n)]
+
+def check_identity(name, solver_cond, matrices, n_val, LHS_sym=None, RHS_sym=None, timeout=1800000):
     s = Solver()
     s.set("timeout", timeout)
     s.add(solver_cond)
@@ -83,6 +121,8 @@ def check_identity(name, solver_cond, matrices, LHS_sym=None, RHS_sym=None, time
     start = time.time()
     res = s.check()
     duration = time.time() - start
+    
+    result = {'Name': name, 'Status': str(res).upper(), 'N': n_val, 'Time (s)': duration, 'NumPy Match': 'N/A', 'Max Diff': 0.0}
     
     if res == sat:
         print(f"Result: SAT (Counter-example found in {duration:.2f}s)")
@@ -97,9 +137,11 @@ def check_identity(name, solver_cond, matrices, LHS_sym=None, RHS_sym=None, time
                 return 0.0
         
         vals = {}
+        n = 0
         for m_name, m_sym in matrices.items():
             val = np.array([[gv(v) for v in row] for row in m_sym])
             vals[m_name] = val
+            if n == 0: n = val.shape[0]
             print(f"Matrix {m_name}:\n{val}")
 
         if LHS_sym is not None and RHS_sym is not None:
@@ -113,12 +155,30 @@ def check_identity(name, solver_cond, matrices, LHS_sym=None, RHS_sym=None, time
             print(f"LHS Value:\n{lhs_val}")
             print(f"RHS Value:\n{rhs_val}")
             print(f"Difference (LHS - RHS):\n{lhs_val - rhs_val}")
+
+            res_data = {
+                'name': name,
+                'n': n,
+                'inputs': {k: v.tolist() for k, v in vals.items()},
+                'LHS': lhs_val.tolist() if isinstance(lhs_val, np.ndarray) else lhs_val,
+                'RHS': rhs_val.tolist() if isinstance(rhs_val, np.ndarray) else rhs_val
+            }
+            
+            os.makedirs('Solutions', exist_ok=True)
+            file_name = f'Solutions/Z3_Solution_{name.replace(" ", "_").replace("*", "x").replace("^", "").replace("(", "").replace(")", "").replace("/", "_")}.pkl'
+            with open(file_name, 'wb') as f:
+                pickle.dump(res_data, f)
+            
+            match, max_diff = verify_identity(name, res_data, n)
+            result['NumPy Match'] = match
+            result['Max Diff'] = max_diff
             
     elif res == unsat:
         print(f"Result: UNSAT (Identity holds in {duration:.2f}s)")
     else:
         print(f"Result: {res}")
     print()
+    return result
 
 def get_fp_setup(N):
     fp_sort = Float32()
@@ -150,7 +210,7 @@ def VerifyTransposeSum(N=2):
     # diff = Or([LHS[i][j] != RHS[i][j] for i in range(N) for j in range(N)])
     diff = Or(LHS[0][1] != RHS[0][1], LHS[0][0] != RHS[0][0])
    
-    check_identity("(A+B)^T = A^T + B^T", And(valid, diff), {"A": A, "B": B}, LHS, RHS)
+    return check_identity("(A+B)^T = A^T + B^T", And(valid, diff), {"A": A, "B": B}, N, LHS, RHS)
 
 # (A*B)^T = B^T * A^T
 def VerifyTransposeProduct(N=2):
@@ -166,7 +226,7 @@ def VerifyTransposeProduct(N=2):
     # diff = Or([LHS[i][j] != RHS[i][j] for i in range(N) for j in range(N)])
     diff = Or(LHS[0][1] != RHS[0][1], LHS[0][0] != RHS[0][0])
     
-    check_identity("(A*B)^T = B^T * A^T", And(valid, diff), {"A": A, "B": B}, LHS, RHS)
+    return check_identity("(A*B)^T = B^T * A^T", And(valid, diff), {"A": A, "B": B}, N, LHS, RHS)
 
 # (A^-1)^-1 = A
 def VerifyInverseInverse(N=2):
@@ -184,7 +244,7 @@ def VerifyInverseInverse(N=2):
     # diff = Or([LHS[i][j] != A[i][j] for i in range(N) for j in range(N)])
     diff = Or(LHS[0][1] != A[0][1], LHS[0][0] != A[0][0])
     
-    check_identity("(A^-1)^-1 = A", And(valid, diff), {"A": A}, LHS, RHS)
+    return check_identity("(A^-1)^-1 = A", And(valid, diff), {"A": A}, N, LHS, RHS)
 
 # (A*B)^-1 = B^-1 * A^-1
 def VerifyInverseProduct(N=2):
@@ -207,12 +267,12 @@ def VerifyInverseProduct(N=2):
     # diff = Or([LHS[i][j] != RHS[i][j] for i in range(N) for j in range(N)])
     diff = Or(LHS[0][1] != RHS[0][1], LHS[0][0] != RHS[0][0])
 
-    check_identity("(A*B)^-1 = B^-1 * A^-1", And(valid, diff), {"A": A, "B": B}, LHS, RHS)
+    return check_identity("(A*B)^-1 = B^-1 * A^-1", And(valid, diff), {"A": A, "B": B}, N, LHS, RHS)
 
 # (A^T)^-1 = (A^-1)^T
 def VerifyTransposeInverse(N=2):
     fp_sort, rm = get_fp_setup(N)
-    A = [[FP(f'a_{i}_{j}', fp_sort) for j in range(N)] for i in range(N)]
+    A = [[FP(f'a_{i}_{j}', fp_sort) for range(N)] for i in range(N)]
     
     AT = transpose_sym(A)
     LHS, detAT = inv_sym(AT, fp=True, rm=rm, fp_sort=fp_sort)
@@ -227,7 +287,7 @@ def VerifyTransposeInverse(N=2):
     # diff = Or([LHS[i][j] != RHS[i][j] for i in range(N) for j in range(N)])
     diff = Or(LHS[0][1] != RHS[0][1], LHS[0][0] != RHS[0][0])
 
-    check_identity("(A^T)^-1 = (A^-1)^T", And(valid, diff), {"A": A}, LHS, RHS)
+    return check_identity("(A^T)^-1 = (A^-1)^T", And(valid, diff), {"A": A}, N, LHS, RHS)
 
 # A * A^-1 = I
 def VerifyInverseIdentity(N=2):
@@ -245,7 +305,7 @@ def VerifyInverseIdentity(N=2):
     diff = Or(LHS[0][1] != RHS[0][1], LHS[0][0] != RHS[0][0])
 
     
-    check_identity("A * A^-1 = I", And(valid, diff), {"A": A}, LHS, RHS)
+    return check_identity("A * A^-1 = I", And(valid, diff), {"A": A}, N, LHS, RHS)
 
 # det(A*B) = det(A) * det(B)
 def VerifyDeterminantProduct(N=2):
@@ -263,7 +323,7 @@ def VerifyDeterminantProduct(N=2):
     valid = get_valid_constraints([A, B])
     diff = (LHS != RHS)
     
-    check_identity("det(A*B) = det(A) * det(B)", And(valid, diff), {"A": A, "B": B}, LHS, RHS)
+    return check_identity("det(A*B) = det(A) * det(B)", And(valid, diff), {"A": A, "B": B}, N, LHS, RHS)
 
 # A(BC) = (AB)C
 def VerifyMultiplicationAssociativity(N=2):
@@ -282,7 +342,7 @@ def VerifyMultiplicationAssociativity(N=2):
     # diff = Or([LHS[i][j] != RHS[i][j] for i in range(N) for j in range(N)])
     diff = Or(LHS[0][1] != RHS[0][1], LHS[0][0] != RHS[0][0])
 
-    check_identity("A(BC) = (AB)C", And(valid, diff), {"A": A, "B": B, "C": C}, LHS, RHS)
+    return check_identity("A(BC) = (AB)C", And(valid, diff), {"A": A, "B": B, "C": C}, N, LHS, RHS)
 
 # A(B+C) = AB + AC
 def VerifyDistributivity(N=2):
@@ -301,7 +361,7 @@ def VerifyDistributivity(N=2):
     valid = get_valid_constraints([A, B, C])
     diff = Or([LHS[i][j] != RHS[i][j] for i in range(N) for j in range(N)])
     
-    check_identity("A(B+C) = AB + AC", And(valid, diff), {"A": A, "B": B, "C": C}, LHS, RHS)
+    return check_identity("A(B+C) = AB + AC", And(valid, diff), {"A": A, "B": B, "C": C}, N, LHS, RHS)
 
 # (A*B*C)^-1 = C^-1 * B^-1 * A^-1
 def VerifyInverseTripleProduct(N=2):
@@ -327,7 +387,7 @@ def VerifyInverseTripleProduct(N=2):
     # diff = Or([LHS[i][j] != RHS[i][j] for i in range(N) for j in range(N)])
     diff = Or(LHS[0][1] != RHS[0][1], LHS[0][0] != RHS[0][0])
 
-    check_identity("(A*B*C)^-1 = C^-1 * B^-1 * A^-1", And(valid, diff), {"A": A, "B": B, "C": C}, LHS, RHS)
+    return check_identity("(A*B*C)^-1 = C^-1 * B^-1 * A^-1", And(valid, diff), {"A": A, "B": B, "C": C}, N, LHS, RHS)
 
 # det(A^-1) = 1/det(A)
 def VerifyDeterminantInverse(N=2):
@@ -345,17 +405,83 @@ def VerifyDeterminantInverse(N=2):
     
     diff = (LHS != RHS)
     
-    check_identity("det(A^-1) = 1/det(A)", And(valid, diff), {"A": A}, LHS, RHS)
+    return check_identity("det(A^-1) = 1/det(A)", And(valid, diff), {"A": A}, N, LHS, RHS)
+
+# tr(A + B) = tr(A) + tr(B)
+def VerifyTraceSum(N=2):
+    fp_sort, rm = get_fp_setup(N)
+    A = [[FP(f'a_{i}_{j}', fp_sort) for j in range(N)] for i in range(N)]
+    B = [[FP(f'b_{i}_{j}', fp_sort) for j in range(N)] for i in range(N)]
+    
+    LHS = trace_sym(add_sym(A, B, fp=True, rm=rm), fp=True, rm=rm)
+    RHS = fpAdd(rm, trace_sym(A, fp=True, rm=rm), trace_sym(B, fp=True, rm=rm))
+    
+    valid = get_valid_constraints([A, B])
+    diff = (LHS != RHS)
+    
+    return check_identity("tr(A + B) = tr(A) + tr(B)", And(valid, diff), {"A": A, "B": B}, N, LHS, RHS)
+
+# tr(AB) = tr(BA)
+def VerifyTraceProduct(N=2):
+    fp_sort, rm = get_fp_setup(N)
+    A = [[FP(f'a_{i}_{j}', fp_sort) for j in range(N)] for i in range(N)]
+    B = [[FP(f'b_{i}_{j}', fp_sort) for j in range(N)] for i in range(N)]
+    
+    LHS = trace_sym(matmul_sym(A, B, fp=True, rm=rm), fp=True, rm=rm)
+    RHS = trace_sym(matmul_sym(B, A, fp=True, rm=rm), fp=True, rm=rm)
+    
+    valid = get_valid_constraints([A, B])
+    diff = (LHS != RHS)
+    
+    return check_identity("tr(AB) = tr(BA)", And(valid, diff), {"A": A, "B": B}, N, LHS, RHS)
+
+# det(kA) = k^n * det(A)
+def VerifyDeterminantScalar(N=2):
+    fp_sort, rm = get_fp_setup(N)
+    A = [[FP(f'a_{i}_{j}', fp_sort) for j in range(N)] for i in range(N)]
+    k = FP('k', fp_sort)
+    
+    LHS = det_sym(scalar_mul_sym(k, A, fp=True, rm=rm), fp=True, rm=rm)
+    
+    detA = det_sym(A, fp=True, rm=rm)
+    kn = k
+    for _ in range(N-1):
+        kn = fpMul(rm, kn, k)
+    RHS = fpMul(rm, kn, detA)
+    
+    valid = get_valid_constraints([A])
+    valid = And(valid, Not(fpIsNaN(k)), Not(fpIsInf(k)), Not(fpIsSubnormal(k)))
+    diff = (LHS != RHS)
+    
+    return check_identity("det(kA) = k^n * det(A)", And(valid, diff), {"A": A, "k": [[k]]}, N, LHS, RHS)
 
 if __name__ == "__main__":
-    VerifyTransposeSum(N=2)
-    VerifyInverseInverse(N=2)
-    VerifyInverseProduct(N=2)
-    VerifyInverseTripleProduct(N=2)
-    VerifyTransposeProduct(N=2)
-    VerifyTransposeInverse(N=2)
-    VerifyInverseIdentity(N=2)
-    VerifyDeterminantProduct(N=2)
-    VerifyDeterminantInverse(N=2)
-    VerifyMultiplicationAssociativity(N=2)
-    VerifyDistributivity(N=2)
+    filename = "Results.xlsx"
+
+    functions = [
+        VerifyTransposeSum,
+        VerifyInverseInverse,
+        VerifyInverseProduct,
+        VerifyInverseTripleProduct,
+        VerifyTransposeProduct,
+        VerifyTransposeInverse,
+        VerifyInverseIdentity,
+        VerifyDeterminantProduct,
+        VerifyDeterminantInverse,
+        VerifyMultiplicationAssociativity,
+        VerifyDistributivity,
+        VerifyTraceSum,
+        VerifyTraceProduct,
+        VerifyDeterminantScalar
+    ]
+
+    for i, func in enumerate(functions):
+        result = func(N=2)
+        df = pd.DataFrame([result])
+
+        if not os.path.exists(filename):
+            df.to_excel(filename, index=False)
+        else:
+            with pd.ExcelWriter(filename, mode='a', engine='openpyxl', if_sheet_exists='overlay') as writer:
+                df.to_excel(writer, index=False, header=False, startrow=writer.sheets['Sheet1'].max_row)
+
