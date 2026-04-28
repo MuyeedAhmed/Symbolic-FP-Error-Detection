@@ -48,6 +48,16 @@ def verify_identity_numpy(name, data, n):
         elif name == "A(B+C) = AB + AC":
             lhs_numpy = A @ (B + C)
             rhs_numpy = (A @ B) + (A @ C)
+        elif name == "tr(A + B) = tr(A) + tr(B)":
+            lhs_numpy = np.trace(A + B)
+            rhs_numpy = np.trace(A) + np.trace(B)
+        elif name == "tr(AB) = tr(BA)":
+            lhs_numpy = np.trace(A @ B)
+            rhs_numpy = np.trace(B @ A)
+        elif name == "det(kA) = k^n * det(A)":
+            k = data['inputs']['k'][0][0]
+            lhs_numpy = det(k * A)
+            rhs_numpy = (k ** n) * det(A)
         else:
             print(f"Unknown identity: {name}")
             return
@@ -73,9 +83,8 @@ def verify_identity_numpy(name, data, n):
     print("-" * 40)
 
 def main():
-    solution_files = glob.glob("solutions/*.pkl")
+    solution_files = glob.glob("Solutions/*.pkl")
     if not solution_files:
-        print("No solution files found in 'solutions/' directory.")
         return
 
     for file_path in solution_files:
