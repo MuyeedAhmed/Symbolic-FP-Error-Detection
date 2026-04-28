@@ -6,28 +6,6 @@ import os
 import pandas as pd
 
 
-def verify_identity(name, data, n):
-    print(f"--- Verifying with NumPy (N={n}): {name} ---")
-    LHS_val = np.array(data['LHS'])
-    RHS_val = np.array(data['RHS'])
-    
-    diff = LHS_val - RHS_val
-    if isinstance(diff, np.ndarray):
-        max_diff = np.max(np.abs(diff))
-    else:
-        max_diff = np.abs(diff)
-        
-    print(f"Max Difference: {max_diff}")
-    match = "Yes"
-    if max_diff > 1e-7:
-        print("Counter-example confirmed by NumPy.")
-        match = "No"
-    else:
-        print("NumPy agrees with the identity (within tolerance).")
-        match = "Yes"
-    return match, max_diff
-
-
 def matmul_sym(M1, M2, fp=True, rm=None):
     n, m, p = len(M1), len(M2[0]), len(M1[0])
     res = [[None for _ in range(m)] for _ in range(n)]
@@ -169,10 +147,6 @@ def check_identity(name, solver_cond, matrices, n_val, LHS_sym=None, RHS_sym=Non
             with open(file_name, 'wb') as f:
                 pickle.dump(res_data, f)
             
-            match, max_diff = verify_identity(name, res_data, n)
-            result['NumPy Match'] = match
-            result['Max Diff'] = max_diff
-            
     elif res == unsat:
         print(f"Result: UNSAT (Identity holds in {duration:.2f}s)")
     else:
@@ -272,7 +246,7 @@ def VerifyInverseProduct(N=2):
 # (A^T)^-1 = (A^-1)^T
 def VerifyTransposeInverse(N=2):
     fp_sort, rm = get_fp_setup(N)
-    A = [[FP(f'a_{i}_{j}', fp_sort) for range(N)] for i in range(N)]
+    A = [[FP(f'a_{i}_{j}', fp_sort) for j in range(N)] for i in range(N)]
     
     AT = transpose_sym(A)
     LHS, detAT = inv_sym(AT, fp=True, rm=rm, fp_sort=fp_sort)
