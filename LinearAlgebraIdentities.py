@@ -148,7 +148,7 @@ def VerifyTransposeSum(N=2):
     
     valid = get_valid_constraints([A, B])
     # diff = Or([LHS[i][j] != RHS[i][j] for i in range(N) for j in range(N)])
-    diff = (LHS[0][1] != RHS[0][1])
+    diff = Or(LHS[0][1] != RHS[0][1], LHS[0][0] != RHS[0][0])
    
     check_identity("(A+B)^T = A^T + B^T", And(valid, diff), {"A": A, "B": B}, LHS, RHS)
 
@@ -164,7 +164,7 @@ def VerifyTransposeProduct(N=2):
     
     valid = get_valid_constraints([A, B])
     # diff = Or([LHS[i][j] != RHS[i][j] for i in range(N) for j in range(N)])
-    diff = (LHS[0][1] != RHS[0][1])
+    diff = Or(LHS[0][1] != RHS[0][1], LHS[0][0] != RHS[0][0])
     
     check_identity("(A*B)^T = B^T * A^T", And(valid, diff), {"A": A, "B": B}, LHS, RHS)
 
@@ -182,7 +182,7 @@ def VerifyInverseInverse(N=2):
                 Not(fpIsZero(detA_inv)), Not(fpIsNaN(detA_inv)), Not(fpIsInf(detA_inv)))
     
     # diff = Or([LHS[i][j] != A[i][j] for i in range(N) for j in range(N)])
-    diff = (LHS[0][1] != A[0][1])
+    diff = Or(LHS[0][1] != A[0][1], LHS[0][0] != A[0][0])
     
     check_identity("(A^-1)^-1 = A", And(valid, diff), {"A": A}, LHS, RHS)
 
@@ -205,7 +205,7 @@ def VerifyInverseProduct(N=2):
                 Not(fpIsZero(detAB)), Not(fpIsNaN(detAB)), Not(fpIsInf(detAB)))
     
     # diff = Or([LHS[i][j] != RHS[i][j] for i in range(N) for j in range(N)])
-    diff = (LHS[0][1] != RHS[0][1])
+    diff = Or(LHS[0][1] != RHS[0][1], LHS[0][0] != RHS[0][0])
 
     check_identity("(A*B)^-1 = B^-1 * A^-1", And(valid, diff), {"A": A, "B": B}, LHS, RHS)
 
@@ -225,7 +225,7 @@ def VerifyTransposeInverse(N=2):
                 Not(fpIsZero(detAT)), Not(fpIsNaN(detAT)), Not(fpIsInf(detAT)))
     
     # diff = Or([LHS[i][j] != RHS[i][j] for i in range(N) for j in range(N)])
-    diff = (LHS[0][1] != RHS[0][1])
+    diff = Or(LHS[0][1] != RHS[0][1], LHS[0][0] != RHS[0][0])
 
     check_identity("(A^T)^-1 = (A^-1)^T", And(valid, diff), {"A": A}, LHS, RHS)
 
@@ -241,7 +241,9 @@ def VerifyInverseIdentity(N=2):
     valid = And(get_valid_constraints([A]),
                 Not(fpIsZero(detA)), Not(fpIsNaN(detA)), Not(fpIsInf(detA)))
     
-    diff = Or([LHS[i][j] != RHS[i][j] for i in range(N) for j in range(N)])
+    # diff = Or([LHS[i][j] != RHS[i][j] for i in range(N) for j in range(N)])
+    diff = Or(LHS[0][1] != RHS[0][1], LHS[0][0] != RHS[0][0])
+
     
     check_identity("A * A^-1 = I", And(valid, diff), {"A": A}, LHS, RHS)
 
@@ -277,8 +279,9 @@ def VerifyMultiplicationAssociativity(N=2):
     RHS = matmul_sym(AB, C, fp=True, rm=rm)
     
     valid = get_valid_constraints([A, B, C])
-    diff = Or([LHS[i][j] != RHS[i][j] for i in range(N) for j in range(N)])
-    
+    # diff = Or([LHS[i][j] != RHS[i][j] for i in range(N) for j in range(N)])
+    diff = Or(LHS[0][1] != RHS[0][1], LHS[0][0] != RHS[0][0])
+
     check_identity("A(BC) = (AB)C", And(valid, diff), {"A": A, "B": B, "C": C}, LHS, RHS)
 
 # A(B+C) = AB + AC
@@ -322,7 +325,7 @@ def VerifyInverseTripleProduct(N=2):
                 Not(fpIsZero(detABC)), Not(fpIsNaN(detABC)), Not(fpIsInf(detABC)))
     
     # diff = Or([LHS[i][j] != RHS[i][j] for i in range(N) for j in range(N)])
-    diff = (LHS[0][1] != RHS[0][1])
+    diff = Or(LHS[0][1] != RHS[0][1], LHS[0][0] != RHS[0][0])
 
     check_identity("(A*B*C)^-1 = C^-1 * B^-1 * A^-1", And(valid, diff), {"A": A, "B": B, "C": C}, LHS, RHS)
 

@@ -13,7 +13,6 @@ This project explores floating-point error detection in linear algebra identitie
 | `A(BC) = (AB)C`                   | Yes | 0.33 | 2,3 |
 | `det(A*B) = det(A) * det(B)`      | No | | |
 | `det(A^-1) = 1/det(A)`            | Yes | 0.74 | 2 |
-<!-- | `A(B+C) = AB + AC`                | Yes | 28.99 | 5 | -->
 | `A(B+C) = AB + AC`                | | | |
 | `(A+B)^T = A^T + B^T`             | No | | |
 | `(A*B)^T = B^T * A^T`             | No | | |
@@ -23,16 +22,16 @@ This project explores floating-point error detection in linear algebra identitie
 
 | Identity | Solution? | Time (s) | Size of N |
 | :--- | :--- | :--- | :--- |
-| `A * A^-1 = I` | | | |
-| `(A^-1)^-1 = A` | | | |
-| `(A*B)^-1 = B^-1 * A^-1` | | | |
+| `A * A^-1 = I` | Yes | 28.35 | 2 |
+| `(A^-1)^-1 = A` | Yes | 88.55 | 2 |
+| `(A*B)^-1 = B^-1 * A^-1` | Yes | 255.39 | 2 |
 | `(A*B*C)^-1 = C^-1 * B^-1 * A^-1` | | | |
-| `A(BC) = (AB)C` | | | |
+| `A(BC) = (AB)C` | Yes | 57.78 | 2 |
 | `det(A*B) = det(A) * det(B)` | | | |
-| `det(A^-1) = 1/det(A)` | | | |
-| `A(B+C) = AB + AC` | | | |
-| `(A+B)^T = A^T + B^T` | | | |
-| `(A*B)^T = B^T * A^T` | | | |
+| `det(A^-1) = 1/det(A)` | Yes | 5.5s | 2 |
+| `A(B+C) = AB + AC` | | 9.25 | 2 |
+| `(A+B)^T = A^T + B^T` | No | | |
+| `(A*B)^T = B^T * A^T` | No | | |
 | `(A^T)^-1 = (A^-1)^T` | | | |
 
 ## How to run
