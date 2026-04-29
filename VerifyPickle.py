@@ -13,7 +13,10 @@ def verify_identity_numpy(name, data, n):
     
     lhs_numpy = None
     rhs_numpy = None
-    
+
+    print(f"Inputs:")
+    for k, v in inputs.items():
+        print(f"  {k}: {v}")
     try:
         if name == "(A+B)^T = A^T + B^T":
             lhs_numpy = (A + B).T
