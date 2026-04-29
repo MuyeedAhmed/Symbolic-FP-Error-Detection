@@ -31,8 +31,11 @@ This project explores floating-point error detection in linear algebra identitie
 | `det(A^-1) = 1/det(A)` | Yes | 5.5s | 2 |
 | `A(B+C) = AB + AC` | | 9.25 | 2 |
 | `(A+B)^T = A^T + B^T` | No | | |
-| `(A*B)^T = B^T * A^T` | No | | |
+| `(A*B)^T = B^T * A^T` | | | |
 | `(A^T)^-1 = (A^-1)^T` | | | |
+| `tr(A + B) = tr(A) + tr(B)` | Yes | 0.31 | 2 |
+| `tr(AB) = tr(BA)` |Yes | 6.98 | 2 |
+| `det(kA) = k^n * det(A)` | Yes | 3.37 | 2 |
 
 ## How to run
 
