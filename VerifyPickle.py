@@ -5,7 +5,7 @@ import glob
 from scipy.linalg import inv, det
 
 def verify_identity_numpy(name, data, n):
-    print(f"--- Verifying with NumPy (N={n}): {name} ---")
+    print(f"--- {name} (N={n}) ---")
     inputs = {k: np.array(v) for k, v in data['inputs'].items()}
     A = inputs.get('A')
     B = inputs.get('B')
@@ -64,18 +64,14 @@ def verify_identity_numpy(name, data, n):
         else:
             print(f"Unknown identity: {name}")
             return
-
+        # print(f"LHS: {lhs_numpy}")
+        # print(f"\nRHS: {rhs_numpy}")
         diff_numpy = np.abs(lhs_numpy - rhs_numpy)
         max_diff_numpy = np.nanmax(diff_numpy) if isinstance(diff_numpy, np.ndarray) else np.abs(lhs_numpy - rhs_numpy)
-        print(f"NumPy LHS vs RHS Max Diff: {max_diff_numpy}")
+        print(f"LHS vs RHS Max Diff: {max_diff_numpy}")
         
-        if max_diff_numpy > 1e-7 or np.isnan(max_diff_numpy) or np.isinf(max_diff_numpy):
-            print("SUCCESS", max_diff_numpy)
-        else:
-            print("FAILURE", max_diff_numpy)
-
     except (ValueError, np.linalg.LinAlgError) as e:
-        print(f"NumPy Error during verification: {e}")
+        print(f"Error during verification: {e}")
     except Exception as e:
         print(f"Unexpected error: {e}")
 
@@ -87,7 +83,10 @@ def main():
         return
 
     for file_path in solution_files:
-        print(f"Reading {file_path}...")
+        if "Gurobi_Solution" in file_path:
+            print("Gurobi")
+        else:
+            print("Z3")
         with open(file_path, 'rb') as f:
             data = pickle.load(f)
             verify_identity_numpy(data['name'], data, data['n'])
