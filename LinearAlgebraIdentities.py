@@ -427,7 +427,7 @@ def VerifyDeterminantScalar(N=2):
     valid = And(valid, Not(fpIsNaN(k)), Not(fpIsInf(k)), Not(fpIsSubnormal(k)))
     diff = (LHS != RHS)
     
-    return check_identity("det(kA) = k^n * det(A)", And(valid, diff), {"A": A, "k": [[k]]}, N, LHS, RHS)
+    return check_identity("det(kA) = k^n * det(A)", And(valid, diff), {"A": A, "k": k}, N, LHS, RHS)
 
 if __name__ == "__main__":
     filename = "Results.xlsx"

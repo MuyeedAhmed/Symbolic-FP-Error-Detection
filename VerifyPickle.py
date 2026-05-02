@@ -58,7 +58,7 @@ def verify_identity_numpy(name, data, n):
             lhs_numpy = np.trace(A @ B)
             rhs_numpy = np.trace(B @ A)
         elif name == "det(kA) = k^n * det(A)":
-            k = data['inputs']['k'][0][0]
+            k = data['inputs']['k']
             lhs_numpy = det(k * A, check_finite=False)
             rhs_numpy = (k ** n) * det(A, check_finite=False)
         else:
