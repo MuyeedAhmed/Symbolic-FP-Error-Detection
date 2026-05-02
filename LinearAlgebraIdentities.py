@@ -164,13 +164,13 @@ def get_valid_constraints(matrices):
     for M in matrices:
         for row in M:
             for v in row:
+                sort = v.sort()
                 conds.append(Not(fpIsNaN(v)))
                 conds.append(Not(fpIsInf(v)))
+                conds.append(Not(fpIsZero(v)))
                 conds.append(Not(fpIsSubnormal(v)))
-                # conds.append(v >= 0.5)
-                # conds.append(v <= 2.0)
-    return And(conds)
 
+    return And(conds)
 # (A+B)^T = A^T + B^T
 def VerifyTransposeSum(N=2):
     fp_sort, rm = get_fp_setup(N)
@@ -422,28 +422,27 @@ def VerifyDeterminantScalar(N=2):
     for _ in range(N-1):
         kn = fpMul(rm, kn, k)
     RHS = fpMul(rm, kn, detA)
-    
-    valid = get_valid_constraints([A])
-    valid = And(valid, Not(fpIsNaN(k)), Not(fpIsInf(k)), Not(fpIsSubnormal(k)))
+
+    valid = get_valid_constraints([A, [[k]]])
     diff = (LHS != RHS)
-    
-    return check_identity("det(kA) = k^n * det(A)", And(valid, diff), {"A": A, "k": k}, N, LHS, RHS)
+
+    return check_identity("det(kA) = k^n * det(A)", And(valid, diff), {"A": A, "k": [[k]]}, N, LHS, RHS)
 
 if __name__ == "__main__":
     filename = "Results.xlsx"
 
     functions = [
-        VerifyTransposeSum,
+        VerifyInverseIdentity,
         VerifyInverseInverse,
         VerifyInverseProduct,
         VerifyInverseTripleProduct,
-        VerifyTransposeProduct,
-        VerifyTransposeInverse,
-        VerifyInverseIdentity,
+        VerifyMultiplicationAssociativity,
         VerifyDeterminantProduct,
         VerifyDeterminantInverse,
-        VerifyMultiplicationAssociativity,
         VerifyDistributivity,
+        VerifyTransposeSum,
+        VerifyTransposeProduct,
+        VerifyTransposeInverse,
         VerifyTraceSum,
         VerifyTraceProduct,
         VerifyDeterminantScalar
