@@ -82,6 +82,18 @@ def inv_gurobi(model, M, n):
 def identity_gurobi(n):
     return [[(1.0 if i == j else 0.0) for j in range(n)] for i in range(n)]
 
+def trace_gurobi(model, M, n):
+    res = model.addVar(lb=-GRB.INFINITY, ub=GRB.INFINITY)
+    model.addConstr(res == gp.quicksum(M[i][i] for i in range(n)))
+    return res
+
+def scalar_mul_gurobi(model, k, M, n):
+    res = [[model.addVar(lb=-GRB.INFINITY, ub=GRB.INFINITY) for _ in range(n)] for _ in range(n)]
+    for i in range(n):
+        for j in range(n):
+            model.addConstr(res[i][j] == k * M[i][j])
+    return res
+
 def fresh_mat(model, name, n):
     mat = [[model.addVar(lb=-GRB.INFINITY, ub=GRB.INFINITY, name=f"{name}_{i}_{j}") for j in range(n)] for i in range(n)]
     for i in range(n):
@@ -255,6 +267,51 @@ def setup_inverse_triple_product(m, n):
     RHS = mat_mul_gurobi(m, C_inv, mat_mul_gurobi(m, B_inv, A_inv, n), n)
     return {"A": A, "B": B, "C": C}, LHS, RHS
 
+def setup_trace_sum(m, n):
+    A = fresh_mat(m, "A", n)
+    B = fresh_mat(m, "B", n)
+    LHS = trace_gurobi(m, add_gurobi(m, A, B, n), n)
+    RHS = m.addVar(lb=-GRB.INFINITY, ub=GRB.INFINITY)
+    m.addConstr(RHS == trace_gurobi(m, A, n) + trace_gurobi(m, B, n))
+    return {"A": A, "B": B}, LHS, RHS
+
+def setup_trace_product(m, n):
+    A = fresh_mat(m, "A", n)
+    B = fresh_mat(m, "B", n)
+    AB = mat_mul_gurobi(m, A, B, n)
+    BA = mat_mul_gurobi(m, B, A, n)
+    LHS = trace_gurobi(m, AB, n)
+    RHS = trace_gurobi(m, BA, n)
+    return {"A": A, "B": B}, LHS, RHS
+
+def setup_det_scalar(m, n):
+    A = fresh_mat(m, "A", n)
+    k = m.addVar(lb=-GRB.INFINITY, ub=GRB.INFINITY, name="k")
+    is_nonzero = m.addVar(vtype=GRB.BINARY, name="nz_k")
+    is_pos = m.addVar(vtype=GRB.BINARY, name="pos_k")
+    is_neg = m.addVar(vtype=GRB.BINARY, name="neg_k")
+    m.addConstr(is_pos + is_neg == is_nonzero)
+    m.addGenConstrIndicator(is_nonzero, False, k == 0)
+    m.addGenConstrIndicator(is_pos, True, k >= 1e-4)
+    m.addGenConstrIndicator(is_neg, True, k <= -1e-4)
+    
+    kA = scalar_mul_gurobi(m, k, A, n)
+    LHS = det_gurobi(m, kA, n)
+    
+    detA = det_gurobi(m, A, n)
+    kn = m.addVar(lb=-GRB.INFINITY, ub=GRB.INFINITY)
+    
+    curr_k = k
+    for _ in range(n - 1):
+        next_k = m.addVar(lb=-GRB.INFINITY, ub=GRB.INFINITY)
+        m.addConstr(next_k == curr_k * k)
+        curr_k = next_k
+    m.addConstr(kn == curr_k)
+    
+    RHS = m.addVar(lb=-GRB.INFINITY, ub=GRB.INFINITY)
+    m.addConstr(RHS == kn * detA)
+    return {"A": A, "k": k}, LHS, RHS
+
 if __name__ == "__main__":
     os.makedirs('Solutions', exist_ok=True)
 
@@ -274,3 +331,7 @@ if __name__ == "__main__":
     run_check("(A+B)^T = A^T + B^T", 3, setup_transpose_sum)
     run_check("(A*B)^T = B^T * A^T", 3, setup_transpose_product)
     run_check("(A^T)^-1 = (A^-1)^T", 2, setup_transpose_inverse)
+
+    run_check("tr(A + B) = tr(A) + tr(B)", 2, setup_trace_sum)
+    run_check("tr(AB) = tr(BA)", 2, setup_trace_product)
+    run_check("det(kA) = k^n * det(A)", 2, setup_det_scalar)
