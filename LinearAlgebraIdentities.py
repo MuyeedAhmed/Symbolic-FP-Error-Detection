@@ -109,8 +109,10 @@ def check_identity(name, solver_cond, matrices, n_val, LHS_sym=None, RHS_sym=Non
             try:
                 val = m.evaluate(v, model_completion=True)
                 if is_fp(val):
-                    return float(val.py_value())
-                return float(val.as_decimal(10).replace("?", ""))
+                    val = m.evaluate(fpToReal(val), model_completion=True)                
+                if is_rational_value(val):
+                    return val.numerator_as_long() / val.denominator_as_long()
+                return float(val.as_decimal(20).replace("?", ""))
             except:
                 return 0.0
         
@@ -132,7 +134,6 @@ def check_identity(name, solver_cond, matrices, n_val, LHS_sym=None, RHS_sym=Non
             rhs_val = eval_sym(RHS_sym)
             print(f"LHS Value:\n{lhs_val}")
             print(f"RHS Value:\n{rhs_val}")
-            print(f"Difference (LHS - RHS):\n{lhs_val - rhs_val}")
 
             res_data = {
                 'name': name,
@@ -165,10 +166,17 @@ def get_valid_constraints(matrices):
         for row in M:
             for v in row:
                 sort = v.sort()
+                rm = RoundNearestTiesToEven()
+
+                min_val = fpRealToFP(rm, RealVal("0.1"), sort)
+                max_val = fpRealToFP(rm, RealVal("10.0"), sort)
+                
                 conds.append(Not(fpIsNaN(v)))
                 conds.append(Not(fpIsInf(v)))
                 conds.append(Not(fpIsZero(v)))
                 conds.append(Not(fpIsSubnormal(v)))
+                conds.append(fpGEQ(fpAbs(v), min_val))
+                conds.append(fpLEQ(fpAbs(v), max_val))
 
     return And(conds)
 # (A+B)^T = A^T + B^T
