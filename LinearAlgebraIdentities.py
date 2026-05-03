@@ -168,8 +168,8 @@ def get_valid_constraints(matrices):
                 sort = v.sort()
                 rm = RoundNearestTiesToEven()
 
-                min_val = fpRealToFP(rm, RealVal("0.1"), sort)
-                max_val = fpRealToFP(rm, RealVal("10.0"), sort)
+                min_val = fpRealToFP(rm, RealVal("0.000001"), sort)
+                max_val = fpRealToFP(rm, RealVal("1000000.0"), sort)
                 
                 conds.append(Not(fpIsNaN(v)))
                 conds.append(Not(fpIsInf(v)))
@@ -457,7 +457,7 @@ if __name__ == "__main__":
     ]
 
     for i, func in enumerate(functions):
-        result = func(N=2)
+        result = func(N=3)
         df = pd.DataFrame([result])
 
         if not os.path.exists(filename):
