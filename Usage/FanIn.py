@@ -152,10 +152,10 @@ def analyze_directory(directory, targets):
     return all_results
 
 def main():
-    parser = argparse.ArgumentParser(description="Find fan-ins for specific functions/operators.")
+    parser = argparse.ArgumentParser()
     parser.add_argument("directory", help="Directory to search (e.g., path to numpy/scipy)")
-    parser.add_argument("--targets", nargs="+", default=['matmul', 'dot', 'inv', 'det', 'trace', '@', '+', '-', '*', '/'],
-                        help="Function names or operators to look for.")
+    parser.add_argument("--targets", nargs="+", default=['matmul', 'dot', 'inv', 'det', 'trace', '@'],
+                        help="Default values: ['matmul', 'dot', 'inv', 'det', 'trace', '@']")
     parser.add_argument("--output", default="FanIn_Results.xlsx",
                         help="Output Excel file name.")
     
@@ -183,9 +183,8 @@ def main():
     except Exception as e:
         print(f"\nError saving to Excel: {e}")
 
-    print("\n" + "="*30)
-    print("Summary")
-    print("="*30)
+    print("\n" + "="*20 +"Summary"+ "="*20)
+    
     summary = df['Target'].value_counts().sort_index()
     for target, count in summary.items():
         print(f"{target:.<20} {count}")
