@@ -18,6 +18,9 @@ TARGET_MAP = {
     '@': 'matmul'
 }
 
+# python Usage/DynamicFanIn.py -m pytest --pyargs scipy.linalg --ignore=/Users/muyeedahmed/Desktop/Gitcode/ForkedLibrary/scipy/scipy/linalg/tests/_cython_examples
+
+
 class DynamicAnalyzer:
     def __init__(self, targets):
         self.targets = targets
@@ -90,12 +93,12 @@ class DynamicAnalyzer:
 def main():
     parser = argparse.ArgumentParser(description="Dynamic Fan-In Analyzer")
     parser.add_argument("-m", "--module", action="store_true", help="Run library module as a script")
-    parser.add_argument("script", help="Script path to run or module name if -m is used")
-    parser.add_argument("script_args", nargs=argparse.REMAINDER, help="Arguments for the script")
     parser.add_argument("--targets", nargs="+", default=['matmul', 'dot', 'inv', 'det', 'trace', '@'],
                         help="Targets to track (default: matmul dot inv det trace @)")
     parser.add_argument("--output", default="Dynamic_FanIn.xlsx", help="Output Excel filename")
     parser.add_argument("--exclude-libs", action="store_true", help="Exclude calls from site-packages/stdlib")
+    parser.add_argument("script", help="Script path to run or module name if -m is used")
+    parser.add_argument("script_args", nargs=argparse.REMAINDER, help="Arguments for the script")
     
     args = parser.parse_args()
     if not args.script:
