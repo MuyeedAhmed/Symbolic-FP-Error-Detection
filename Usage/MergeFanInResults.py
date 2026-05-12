@@ -5,8 +5,8 @@ import argparse
 
 def merge_results(pattern, output):
     files = glob.glob(pattern)
+    print(files)
     if not files:
-        print(f"No files found matching {pattern}")
         return
 
     all_dfs = []
@@ -14,7 +14,6 @@ def merge_results(pattern, output):
         try:
             df = pd.read_excel(f)
             all_dfs.append(df)
-            print(f"Loaded {f}")
         except Exception as e:
             print(f"Error loading {f}: {e}")
 
@@ -22,10 +21,7 @@ def merge_results(pattern, output):
         return
 
     combined = pd.concat(all_dfs, ignore_index=True)
-    
-    # Group and aggregate
-    # We sum Call Count and Total Executions
-    # We take the max of Function Size (should be identical)
+
     agg_dict = {
         'Call Count': 'sum',
         'Total Executions': 'sum',
@@ -36,8 +32,12 @@ def merge_results(pattern, output):
     merged = combined.groupby(['Method Path', 'Target']).agg(agg_dict).reset_index()
     merged = merged.sort_values(by='Call Count', ascending=False)
     
-    merged.to_excel(output, index=False)
-    print(f"Merged results saved to {output}")
+    Filtered = FilterResults(merged)
+
+    Filtered.to_excel(output, index=False)
+
+def FilterResults(df):
+    return df[~df["Method Path"].str.contains(r"\.tests\.", na=False, regex=True)]
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

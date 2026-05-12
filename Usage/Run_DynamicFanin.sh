@@ -1,7 +1,7 @@
 #!/bin/bash
 
 PACKAGES=("linalg" "optimize" "stats" "signal" "sparse" "integrate" "interpolate")
-OUTPUT_DIR="Output"
+OUTPUT_DIR="DynamicFanInResults"
 mkdir -p $OUTPUT_DIR
 
 for PKG in "${PACKAGES[@]}"; do
