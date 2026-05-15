@@ -137,7 +137,10 @@ def main():
         sys.path = orig_path
 
     results = []
+    processed_callers = set()
+
     for (key, target), call_count in analyzer.hits.items():
+        processed_callers.add(key)
         meta = analyzer.metadata.get(key, {})
         file_path = meta.get('file', 'unknown')
         
@@ -160,9 +163,35 @@ def main():
             'File Path': file_path
         })
 
+    for key, count in analyzer.executions.items():
+        if key in processed_callers:
+            continue
+            
+        meta = analyzer.metadata.get(key, {})
+        file_path = meta.get('file', 'unknown')
+        
+        if args.exclude_libs:
+            if 'site-packages' in file_path or 'lib/python' in file_path:
+                continue
+
+        mod = meta.get('module', 'unknown')
+        cls = meta.get('class')
+        func = meta.get('name', 'unknown')
+        
+        method_path = f"{mod}.{cls}.{func}" if cls else f"{mod}.{func}"
+        
+        results.append({
+            'Method Path': method_path,
+            'Target': None,
+            'Call Count': 0,
+            'Total Executions': count,
+            'Function Size': meta.get('size', 0),
+            'File Path': file_path
+        })
+
     if results:
         df = pd.DataFrame(results)
-        df = df.sort_values(by='Call Count', ascending=False)
+        df = df.sort_values(by=['Call Count', 'Total Executions'], ascending=False)
         df.to_excel(args.output, index=False)
 
 
