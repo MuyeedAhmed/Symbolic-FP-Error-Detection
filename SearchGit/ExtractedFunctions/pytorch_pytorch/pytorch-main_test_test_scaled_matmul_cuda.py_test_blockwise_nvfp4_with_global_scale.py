@@ -1,5 +1,4 @@
-    def test_blockwise_nvfp4_with_global_scale(self, mkn) -> None:
-        device = 'cuda'
+    def test_blockwise_nvfp4_with_global_scale(self, mkn, device) -> None:
         M, K, N = mkn
         BLOCK_SIZE = 16
         # Note: SQNR target from `test_blockwise_mxfp8_nvfp4_mxfp4_numerics` test

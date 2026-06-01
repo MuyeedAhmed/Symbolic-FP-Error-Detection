@@ -43,12 +43,13 @@ def search_linalg_in_file(content):
             self.source_lines = source_lines
             self.current_function_node = None
             self.found_functions = {}
-            self.counts = {'dot': 0, 'inv': 0, 'matmul': 0}
+            self.counts = {'dot': 0, 'inv': 0, 'matmul': 0, 'multi_dot': 0}
             self.details = []
             self.numpy_aliases = set()
             self.linalg_aliases = set()
             self.dot_imported = False
             self.inv_imported = False
+            self.multi_dot_imported = False
 
         def visit_Import(self, node):
             for alias in node.names:
@@ -64,6 +65,7 @@ def search_linalg_in_file(content):
             if node.module == 'numpy.linalg':
                 for alias in node.names:
                     if alias.name == 'inv': self.inv_imported = True
+                    if alias.name == 'multi_dot': self.multi_dot_imported = True
             self.generic_visit(node)
 
         def visit_FunctionDef(self, node):
@@ -90,9 +92,11 @@ def search_linalg_in_file(content):
             if isinstance(node.func, ast.Attribute):
                 if node.func.attr == 'dot': type_found = 'dot'
                 elif node.func.attr == 'inv': type_found = 'inv'
+                elif node.func.attr == 'multi_dot': type_found = 'multi_dot'
             elif isinstance(node.func, ast.Name):
                 if node.func.id == 'dot' and self.dot_imported: type_found = 'dot'
                 elif node.func.id == 'inv' and self.inv_imported: type_found = 'inv'
+                elif node.func.id == 'multi_dot' and self.multi_dot_imported: type_found = 'multi_dot'
 
             if type_found:
                 self.counts[type_found] += 1
@@ -111,7 +115,7 @@ def search_linalg_in_file(content):
         v = LinearAlgebraVisitor(source_lines)
         v.visit(tree)
         return v.counts, v.details, v.found_functions
-    except: return {'dot': 0, 'inv': 0, 'matmul': 0}, [], {}
+    except: return {'dot': 0, 'inv': 0, 'matmul': 0, 'multi_dot': 0}, [], {}
 
 def main():
     if not os.path.exists(EXTRACTED_BASE_DIR): os.makedirs(EXTRACTED_BASE_DIR)
@@ -119,7 +123,7 @@ def main():
     summary, detailed = [], []
     for repo in repos:
         name = repo['full_name']
-        repo_summary = {'repo': name, 'dot': 0, 'inv': 0, 'matmul': 0}
+        repo_summary = {'repo': name, 'dot': 0, 'inv': 0, 'matmul': 0, 'multi_dot': 0}
         url = f"https://github.com/{name}/archive/refs/heads/{repo['default_branch']}.zip"
         try:
             res = requests.get(url, timeout=60)
@@ -144,7 +148,7 @@ def main():
                                 except: continue
         except: pass
         summary.append(repo_summary)
-        print(f"{name}: dot={repo_summary['dot']}, inv={repo_summary['inv']}, matmul={repo_summary['matmul']}")
+        print(f"{name}: dot={repo_summary['dot']}, inv={repo_summary['inv']}, matmul={repo_summary['matmul']}, multi_dot={repo_summary['multi_dot']}")
         time.sleep(1)
 
     os.makedirs("Results", exist_ok=True)

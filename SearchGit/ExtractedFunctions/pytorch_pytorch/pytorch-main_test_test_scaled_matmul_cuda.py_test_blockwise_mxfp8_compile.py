@@ -1,6 +1,5 @@
-    def test_blockwise_mxfp8_compile(self) -> None:
+    def test_blockwise_mxfp8_compile(self, device) -> None:
 
-        device = "cuda"
         M, K, N = 128, 128, 128
         BLOCK_SIZE = 32
 

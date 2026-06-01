@@ -16,7 +16,6 @@ def _chunk_scan_fwd_kernel(
     chunk_size: tl.constexpr,
     hdim: tl.constexpr,
     dstate: tl.constexpr,
-    seqlen,
     nheads_ngroups_ratio: tl.constexpr,
     # Strides
     stride_cb_chunk: tl.int64,

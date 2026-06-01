@@ -1,6 +1,5 @@
-    def test_blockwise_nvfp4_compile(self) -> None:
+    def test_blockwise_nvfp4_compile(self, device) -> None:
 
-        device = "cuda"
         M, K, N = 128, 128, 128
         BLOCK_SIZE = 32 if torch.version.hip else 16
         fp4_scaling_dtype = torch.float8_e8m0fnu if torch.version.hip else torch.float8_e4m3fn

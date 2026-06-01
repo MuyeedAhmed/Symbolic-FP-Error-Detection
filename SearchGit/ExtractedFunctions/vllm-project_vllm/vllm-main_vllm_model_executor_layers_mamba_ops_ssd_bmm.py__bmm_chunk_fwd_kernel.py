@@ -5,7 +5,6 @@ def _bmm_chunk_fwd_kernel(
     out_ptr,
     cu_chunk_seqlens_ptr,
     # Matrix dimensions
-    seqlen,
     chunk_size: tl.constexpr,
     K: tl.constexpr,
     ngroups: tl.constexpr,
