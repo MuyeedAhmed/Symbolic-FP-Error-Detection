@@ -1,7 +1,8 @@
 import z3
 import numpy as np
 from decimal import Decimal, getcontext
-import time
+import pickle
+import os
 
 getcontext().prec = 100
 
@@ -24,10 +25,9 @@ def get_bit_exact_float(m, z3_var):
         except:
             return np.float32(0.0)
 
-def MaximizeGap(K=4, num_iterations=20):
-    
+def MaximizeGap(K=4):
     s = z3.Solver()
-    s.set("timeout", 300000)
+    s.set("timeout", 180000)
     
     float_sort = z3.FPSort(8, 24)
     rm = z3.RoundNearestTiesToEven()
@@ -48,27 +48,21 @@ def MaximizeGap(K=4, num_iterations=20):
     acc2 = get_z3_kernel_acc(a[2:4], b[2:4])
     c_final_a = z3.fpAdd(rm, z3.fpMul(rm, alpha, acc2), c_mid)
     
-    acc_all = get_z3_kernel_acc(a[0:4], b[0:4])
+    acc_all = get_z3_kernel_acc(a[0:K], b[0:K])
     c_final_b = z3.fpAdd(rm, z3.fpMul(rm, alpha, acc_all), c_init)
     
     s.add(c_final_a != c_final_b)
-    
     for x in a + b + [c_init, alpha]:
         s.add(z3.Not(z3.fpIsNaN(x)), z3.Not(z3.fpIsInf(x)), z3.Not(z3.fpIsZero(x)))
+    s.add(z3.Not(z3.fpIsInf(c_final_a)), z3.Not(z3.fpIsInf(c_final_b)))
 
     max_gap = 0.0
-    best_inputs = None
+    all_solutions = []
     
-    iteration = 0
-
-    while iteration < num_iterations:
-        iteration += 1
-        print(f"  Checking iteration {iteration}...")
+    for iteration in range(1, 11):
         res = s.check()
-        print(f"  Result: {res}")
         if res == z3.sat:
             m = s.model()
-            
             alpha_v = get_bit_exact_float(m, alpha)
             c_i_v = get_bit_exact_float(m, c_init)
             a_v = [get_bit_exact_float(m, x) for x in a]
@@ -81,35 +75,36 @@ def MaximizeGap(K=4, num_iterations=20):
                 return acc
 
             p_acc1 = py_kernel_acc(a_v[0:2], b_v[0:2])
-            p_c_mid = np.float32(float(alpha_v) * float(p_acc1) + float(c_i_v))
+            term1 = np.float32(float(alpha_v) * float(p_acc1))
+            p_c_mid = np.float32(float(term1) + float(c_i_v))
             p_acc2 = py_kernel_acc(a_v[2:4], b_v[2:4])
-            p_c_final_a = np.float32(float(alpha_v) * float(p_acc2) + float(p_c_mid))
-            
+            term2 = np.float32(float(alpha_v) * float(p_acc2))
+            p_c_final_a = np.float32(float(term2) + float(p_c_mid))
             p_acc_all = py_kernel_acc(a_v, b_v)
-            p_c_final_b = np.float32(float(alpha_v) * float(p_acc_all) + float(c_i_v))
+            term_b = np.float32(float(alpha_v) * float(p_acc_all))
+            p_c_final_b = np.float32(float(term_b) + float(c_i_v))
             
-            current_gap = abs(float(p_c_final_a) - float(p_c_final_b))
-            print(f"  Counter-example {iteration}: gap = {current_gap}")
+            gap = abs(float(p_c_final_a) - float(p_c_final_b))
+            print(f"Iteration {iteration}: gap = {gap}")
             
-            if current_gap > max_gap:
-                max_gap = current_gap
-                best_inputs = (alpha_v, c_i_v, a_v, b_v, p_c_final_a, p_c_final_b)
+            all_solutions.append({'alpha': alpha_v, 'c_init': c_i_v, 'a': a_v, 'b': b_v, 'gap': gap})
+            if gap > max_gap: max_gap = gap
             
-            s.add(z3.Or([x != m[x] for x in a + b + [c_init, alpha]]))
+            s.add(z3.Abs(z3.fpToReal(c_final_a) - z3.fpToReal(c_final_b)) > max_gap)
         else:
             break
             
-    if best_inputs:
-        alpha_v, c_i_v, a_v, b_v, res_a, res_b = best_inputs
-        print(f"\n--- Maximum Gap Found ---")
-        print(f"  Inputs: alpha={alpha_v}, c_init={c_i_v}")
-        print(f"  a: {a_v}")
-        print(f"  b: {b_v}")
-        print(f"  Result Config A (KC=2): {res_a}")
-        print(f"  Result Config B (KC=4): {res_b}")
-        print(f"  Absolute Execution Difference: {abs(res_a - res_b)}")
-    else:
-        print("Could not find any divergence.")
+    os.makedirs('Solutions', exist_ok=True)
+    with open('Solutions/TilingGaps.pkl', 'wb') as f:
+        pickle.dump(all_solutions, f)
+
+    if all_solutions:
+        best = max(all_solutions, key=lambda x: x['gap'])
+        print(f"\n--- Best Results ---")
+        print(f"  alpha: {best['alpha']}, c_init: {best['c_init']}")
+        print(f"  a: {best['a']}")
+        print(f"  b: {best['b']}")
+        print(f"  gap: {best['gap']}")
 
 if __name__ == "__main__":
     MaximizeGap()
