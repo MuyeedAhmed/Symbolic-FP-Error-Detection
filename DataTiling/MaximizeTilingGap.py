@@ -3,6 +3,8 @@ import numpy as np
 from decimal import Decimal, getcontext
 import pickle
 import os
+import time
+import sys
 
 getcontext().prec = 100
 
@@ -26,6 +28,7 @@ def get_bit_exact_float(m, z3_var):
             return np.float32(0.0)
 
 def MaximizeGap(K=4):
+    start_time = time.time()
     s = z3.Solver()
     s.set("timeout", 180000)
     
@@ -43,10 +46,11 @@ def MaximizeGap(K=4):
             acc = z3.fpFMA(rm, ai, bi, acc)
         return acc
 
-    acc1 = get_z3_kernel_acc(a[0:2], b[0:2])
-    c_mid = z3.fpAdd(rm, z3.fpMul(rm, alpha, acc1), c_init)
-    acc2 = get_z3_kernel_acc(a[2:4], b[2:4])
-    c_final_a = z3.fpAdd(rm, z3.fpMul(rm, alpha, acc2), c_mid)
+    c_acc = c_init
+    for i in range(0, K, 2):
+        acc = get_z3_kernel_acc(a[i:i+2], b[i:i+2])
+        c_acc = z3.fpAdd(rm, z3.fpMul(rm, alpha, acc), c_acc)
+    c_final_a = c_acc
     
     acc_all = get_z3_kernel_acc(a[0:K], b[0:K])
     c_final_b = z3.fpAdd(rm, z3.fpMul(rm, alpha, acc_all), c_init)
@@ -60,7 +64,10 @@ def MaximizeGap(K=4):
     all_solutions = []
     
     for iteration in range(1, 11):
+        iter_start = time.time()
         res = s.check()
+        iter_end = time.time()
+        
         if res == z3.sat:
             m = s.model()
             alpha_v = get_bit_exact_float(m, alpha)
@@ -74,37 +81,39 @@ def MaximizeGap(K=4):
                     acc = fma_python(ai, bi, acc)
                 return acc
 
-            p_acc1 = py_kernel_acc(a_v[0:2], b_v[0:2])
-            term1 = np.float32(float(alpha_v) * float(p_acc1))
-            p_c_mid = np.float32(float(term1) + float(c_i_v))
-            p_acc2 = py_kernel_acc(a_v[2:4], b_v[2:4])
-            term2 = np.float32(float(alpha_v) * float(p_acc2))
-            p_c_final_a = np.float32(float(term2) + float(p_c_mid))
+            py_c_acc = np.float32(c_i_v)
+            for i in range(0, K, 2):
+                acc_v = py_kernel_acc(a_v[i:i+2], b_v[i:i+2])
+                term = np.float32(float(alpha_v) * float(acc_v))
+                py_c_acc = np.float32(float(term) + float(py_c_acc))
+            p_c_final_a = py_c_acc
+
             p_acc_all = py_kernel_acc(a_v, b_v)
             term_b = np.float32(float(alpha_v) * float(p_acc_all))
             p_c_final_b = np.float32(float(term_b) + float(c_i_v))
             
             gap = abs(float(p_c_final_a) - float(p_c_final_b))
-            print(f"Iteration {iteration}: gap = {gap}")
             
             all_solutions.append({'alpha': alpha_v, 'c_init': c_i_v, 'a': a_v, 'b': b_v, 'gap': gap})
             if gap > max_gap: max_gap = gap
             
-            s.add(z3.Abs(z3.fpToReal(c_final_a) - z3.fpToReal(c_final_b)) > max_gap)
+            print(f"Iteration {iteration}: Gap {gap:.10e}, Time {iter_end - iter_start:.2f}s (Total: {time.time() - start_time:.2f}s)")
+            current_gap_expr = z3.fpAbs(z3.fpSub(rm, c_final_a, c_final_b))
+            s.add(z3.fpGT(current_gap_expr, m.eval(current_gap_expr)))
         else:
+            print(f"Iteration {iteration}: No more solutions found (Status: {res})")
             break
             
     os.makedirs('Solutions', exist_ok=True)
-    with open('Solutions/TilingGaps.pkl', 'wb') as f:
+    with open(f'Solutions/TilingGaps_K{K}.pkl', 'wb') as f:
         pickle.dump(all_solutions, f)
 
-    if all_solutions:
-        best = max(all_solutions, key=lambda x: x['gap'])
-        print(f"\n--- Best Results ---")
-        print(f"  alpha: {best['alpha']}, c_init: {best['c_init']}")
-        print(f"  a: {best['a']}")
-        print(f"  b: {best['b']}")
-        print(f"  gap: {best['gap']}")
+    duration = time.time() - start_time
+    print(f"K={K}: Found {len(all_solutions)} solutions in {duration:.2f}s. Max Gap: {max_gap}")
 
 if __name__ == "__main__":
-    MaximizeGap()
+    k_size = 4
+    if len(sys.argv) > 1:
+        k_size = int(sys.argv[1])
+        
+    MaximizeGap(K=k_size)
