@@ -5,6 +5,7 @@ import pickle
 import os
 import time
 import sys
+import random
 
 getcontext().prec = 100
 
@@ -29,8 +30,8 @@ def get_bit_exact_float(m, z3_var):
 
 def MaximizeGap(K=4):
     start_time = time.time()
-    s = z3.Solver()
-    s.set("timeout", 180000)
+    s = z3.Tactic('qffp').solver()
+    s.set("timeout", 60000)
     
     float_sort = z3.FPSort(8, 24)
     rm = z3.RoundNearestTiesToEven()
@@ -43,7 +44,8 @@ def MaximizeGap(K=4):
     def get_z3_kernel_acc(a_sub, b_sub):
         acc = z3.FPVal(0.0, float_sort)
         for ai, bi in zip(a_sub, b_sub):
-            acc = z3.fpFMA(rm, ai, bi, acc)
+            # acc = z3.fpFMA(rm, ai, bi, acc)
+            acc = z3.fpAdd(rm, z3.fpMul(rm, ai, bi), acc)
         return acc
 
     c_acc = c_init
@@ -55,15 +57,29 @@ def MaximizeGap(K=4):
     acc_all = get_z3_kernel_acc(a[0:K], b[0:K])
     c_final_b = z3.fpAdd(rm, z3.fpMul(rm, alpha, acc_all), c_init)
     
-    s.add(c_final_a != c_final_b)
     for x in a + b + [c_init, alpha]:
-        s.add(z3.Not(z3.fpIsNaN(x)), z3.Not(z3.fpIsInf(x)), z3.Not(z3.fpIsZero(x)))
+        s.add(z3.fpIsNormal(x))
+        s.add(z3.fpAbs(x) <= z3.FPVal(1e6, float_sort))
+
+    # s.add(z3.fpAbs(c_init) >= z3.FPVal(1e4, float_sort))
+    # s.add(z3.fpAbs(alpha) <= z3.FPVal(1.0, float_sort))
+
     s.add(z3.Not(z3.fpIsInf(c_final_a)), z3.Not(z3.fpIsInf(c_final_b)))
 
-    max_gap = 0.0
     all_solutions = []
+    target_gap = 1e-3
+    found_any = False
     
-    for iteration in range(1, 11):
+    print(f"K={K}")
+    
+    for attempt in range(1, 11):
+        s.push()
+        seed = random.randint(0, 10000)
+        s.set("smt.random_seed", seed)
+        
+        s.add(z3.fpGT(z3.fpAbs(z3.fpSub(rm, c_final_a, c_final_b)), z3.FPVal(target_gap, float_sort)))
+        
+        print(f"Attempt {attempt}: Checking for gap > {target_gap:.2e} (seed: {seed})...")
         iter_start = time.time()
         res = s.check()
         iter_end = time.time()
@@ -95,20 +111,27 @@ def MaximizeGap(K=4):
             gap = abs(float(p_c_final_a) - float(p_c_final_b))
             
             all_solutions.append({'alpha': alpha_v, 'c_init': c_i_v, 'a': a_v, 'b': b_v, 'gap': gap})
-            if gap > max_gap: max_gap = gap
+            print(f"SUCCESS! Gap: {gap:.10e}, Time: {iter_end - iter_start:.2f}s")
             
-            print(f"Iteration {iteration}: Gap {gap:.10e}, Time {iter_end - iter_start:.2f}s (Total: {time.time() - start_time:.2f}s)")
-            current_gap_expr = z3.fpAbs(z3.fpSub(rm, c_final_a, c_final_b))
-            s.add(z3.fpGT(current_gap_expr, m.eval(current_gap_expr)))
+            s.pop()
+            if gap > target_gap:
+                target_gap = gap * 1.5
+            found_any = True
         else:
-            print(f"Iteration {iteration}: No more solutions found (Status: {res})")
-            break
+            s.pop()
+            print(f"Attempt {attempt} failed (Result: {res}, Time: {iter_end - iter_start:.2f}s)")
+            if not found_any:
+                target_gap /= 10.0
+                if target_gap < 1e-12: break
+            else:
+                pass
             
     os.makedirs('Solutions', exist_ok=True)
     with open(f'Solutions/TilingGaps_K{K}.pkl', 'wb') as f:
         pickle.dump(all_solutions, f)
 
     duration = time.time() - start_time
+    max_gap = max([sol['gap'] for sol in all_solutions]) if all_solutions else 0
     print(f"K={K}: Found {len(all_solutions)} solutions in {duration:.2f}s. Max Gap: {max_gap}")
 
 if __name__ == "__main__":
