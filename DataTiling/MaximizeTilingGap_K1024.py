@@ -125,6 +125,8 @@ def MaximizeGapK1024():
     
     s.add(z3.fpIsNormal(c_init), z3.fpIsNormal(alpha))
     s.add(z3.fpAbs(c_init) >= z3.FPVal(1e3, float_sort))
+    s.add(z3.fpAbs(c_init) <= z3.FPVal(1e6, float_sort))
+    s.add(z3.fpAbs(alpha) >= z3.FPVal(0.1, float_sort))
     s.add(z3.fpAbs(alpha) <= z3.FPVal(10.0, float_sort))
 
     s.add(z3.Not(z3.fpIsInf(c_final_a)), z3.Not(z3.fpIsInf(c_final_b)))
@@ -187,5 +189,5 @@ def MaximizeGapK1024():
     print(f"Maximum Gap found: {max_gap}")
 
 if __name__ == "__main__":
-    # MaximizeGapK1024()
+    MaximizeGapK1024()
     ReadAndPrintPickleSolutions(1024)
