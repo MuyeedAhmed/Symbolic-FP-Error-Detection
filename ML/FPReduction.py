@@ -8,6 +8,7 @@ class FPReduction:
     '''
     @staticmethod
     def left_fold(arr: np.ndarray) -> np.float32:
+        """Sequential left-to-right accumulate: ((a0+a1)+a2)+…"""
         arr = np.asarray(arr, dtype=np.float32)
         acc = arr[0]
         for v in arr[1:]:
@@ -16,6 +17,7 @@ class FPReduction:
 
     @staticmethod
     def right_fold(arr: np.ndarray) -> np.float32:
+        """Sequential right-to-left accumulate: …+(a2+(a1+a0))"""
         arr = np.asarray(arr, dtype=np.float32)
         acc = arr[-1]
         for v in arr[-2::-1]:
@@ -27,6 +29,7 @@ class FPReduction:
     '''
     @staticmethod
     def tree_fold(arr: np.ndarray) -> np.float32:
+        """Pairwise tree reduction: 2-wide SIMD lane merge (GPU default)."""
         arr = np.asarray(arr, dtype=np.float32).copy()
         while len(arr) > 1:
             half  = len(arr) // 2
@@ -80,6 +83,7 @@ class FPReduction:
 
     @classmethod
     def z3_get(cls, name: str):
+        """Return a Z3 symbolic fold builder by name ('left' or 'tree')."""
         if name == "left":
             return cls.z3_left
         if name == "tree":
