@@ -148,7 +148,22 @@ if __name__ == "__main__":
 
     prop = result.get("propagation", {})
     if prop:
-        n = len(prop["X"])
+        X   = prop["X"]
+        c0  = result["c0"]
+        c1  = result["c1"]
+        n   = len(X)
+        na  = finder.n_anchor
+        nb  = finder.n_boundary
+        row_labels = ([f"c0-anchor-{i}" for i in range(na)] +
+                      [f"c1-anchor-{i}" for i in range(na)] +
+                      [f"boundary-{i}"  for i in range(nb)])
+        print(f"\nDataset points ({n} total)")
+        for i, pt in enumerate(X):
+            d0 = float(np.sum((pt - c0) ** 2))
+            d1 = float(np.sum((pt - c1) ** 2))
+            lbl = row_labels[i] if i < len(row_labels) else f"pt-{i}"
+            print(f"  idx {i:2d}  {lbl:14s}  {pt}  dist^2_to_c0={d0:.6g}  dist^2_to_c1={d1:.6g}")
+
         print(f"\nResults (iterated KMeans, {n} points)")
         print(f"  left_fold: {prop['labels_A']}")
         print(f"  tree_fold: {prop['labels_B']}")
