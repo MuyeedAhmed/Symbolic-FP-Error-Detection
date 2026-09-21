@@ -1,0 +1,26 @@
+digraph effects {
+  label="(A @ B) @ C vs A @ (B @ C)"; labelloc=t; fontsize=14;
+  rankdir=BT; node [shape=box, fontname=Helvetica, fontsize=11];
+  subgraph cluster_A { label="A (sklearn-style)"; style=rounded; color=gray50;
+    A0 [label="dot32^left", style=filled, fillcolor=gray92, peripheries=2];
+    A1 [label="dot32^left", style=filled, fillcolor=gray92, color=red, penwidth=2.5, fontcolor=red];
+    A2 [label="A : float32[m,k]", shape=ellipse];
+    A3 [label="B : float32[k,l]", shape=ellipse];
+    A4 [label="C : float32[l,n]", shape=ellipse];
+    A1 -> A0 [label="0"];
+    A4 -> A0 [label="1"];
+    A2 -> A1 [label="0"];
+    A3 -> A1 [label="1"];
+  }
+  subgraph cluster_B { label="B (cuML-style)"; style=rounded; color=gray50;
+    B0 [label="dot32^left", style=filled, fillcolor=gray92, peripheries=2];
+    B1 [label="A : float32[m,k]", shape=ellipse, color=red, penwidth=2.5, fontcolor=red];
+    B2 [label="dot32^left", style=filled, fillcolor=gray92];
+    B3 [label="B : float32[k,l]", shape=ellipse];
+    B4 [label="C : float32[l,n]", shape=ellipse];
+    B1 -> B0 [label="0"];
+    B2 -> B0 [label="1"];
+    B3 -> B2 [label="0"];
+    B4 -> B2 [label="1"];
+  }
+}
