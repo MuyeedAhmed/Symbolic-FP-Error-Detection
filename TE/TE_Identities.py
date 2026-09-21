@@ -314,7 +314,7 @@ def to_dot(a: Analysis, b: Analysis, difference: Optional[Tuple[Node, Node]], ti
 
 
 def compare(title: str, file_name: str, source_a: str, source_b: str, inputs: Dict[str, Type],
-            label_a: str = "A (sklearn-style)", label_b: str = "B (cuML-style)", dot_directory: str = "dot"):
+            label_a: str = "A (sklearn)", label_b: str = "B (cuML)", dot_directory: str = "dot"):
     print("=" * 100)
     print(f"  {title}")
     print("=" * 100)

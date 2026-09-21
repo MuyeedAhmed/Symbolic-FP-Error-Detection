@@ -1,7 +1,7 @@
 digraph effects {
   label="(A @ B) @ C vs A @ (B @ C)"; labelloc=t; fontsize=14;
   rankdir=BT; node [shape=box, fontname=Helvetica, fontsize=11];
-  subgraph cluster_A { label="A (sklearn-style)"; style=rounded; color=gray50;
+  subgraph cluster_A { label="A (sklearn)"; style=rounded; color=gray50;
     A0 [label="dot32^left", style=filled, fillcolor=gray92, peripheries=2];
     A1 [label="dot32^left", style=filled, fillcolor=gray92, color=red, penwidth=2.5, fontcolor=red];
     A2 [label="A : float32[m,k]", shape=ellipse];
@@ -12,7 +12,7 @@ digraph effects {
     A2 -> A1 [label="0"];
     A3 -> A1 [label="1"];
   }
-  subgraph cluster_B { label="B (cuML-style)"; style=rounded; color=gray50;
+  subgraph cluster_B { label="B (cuML)"; style=rounded; color=gray50;
     B0 [label="dot32^left", style=filled, fillcolor=gray92, peripheries=2];
     B1 [label="A : float32[m,k]", shape=ellipse, color=red, penwidth=2.5, fontcolor=red];
     B2 [label="dot32^left", style=filled, fillcolor=gray92];
