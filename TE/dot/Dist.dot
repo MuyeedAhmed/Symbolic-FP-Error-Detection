@@ -1,0 +1,43 @@
+digraph effects {
+  label="Squared distance: sum((x - y)^2) vs ||x||^2 + ||y||^2 - 2 x.y"; labelloc=t; fontsize=14;
+  rankdir=BT; node [shape=box, fontname=Helvetica, fontsize=11];
+  subgraph cluster_A { label="A (sklearn)"; style=rounded; color=gray50;
+    A0 [label="sum32^left", style=filled, fillcolor=gray92, color=red, penwidth=2.5, fontcolor=red, peripheries=2];
+    A1 [label="x32", style=filled, fillcolor=gray92];
+    A2 [label="-32", style=filled, fillcolor=gray92];
+    A3 [label="x : float32[n]", shape=ellipse];
+    A4 [label="y : float32[n]", shape=ellipse];
+    A1 -> A0;
+    A2 -> A1;
+    A2 -> A1;
+    A3 -> A2 [label="0"];
+    A4 -> A2 [label="1"];
+  }
+  subgraph cluster_B { label="B (cuML)"; style=rounded; color=gray50;
+    B0 [label="-32", style=filled, fillcolor=gray92, color=red, penwidth=2.5, fontcolor=red, peripheries=2];
+    B1 [label="+32", style=filled, fillcolor=gray92];
+    B2 [label="sum32^tree", style=filled, fillcolor=gray92];
+    B3 [label="x32", style=filled, fillcolor=gray92];
+    B4 [label="x : float32[n]", shape=ellipse];
+    B5 [label="sum32^tree", style=filled, fillcolor=gray92];
+    B6 [label="x32", style=filled, fillcolor=gray92];
+    B7 [label="y : float32[n]", shape=ellipse];
+    B8 [label="x32", style=filled, fillcolor=gray92];
+    B9 [label="2.0 (float32)", shape=plaintext];
+    B10 [label="dot32^tree", style=filled, fillcolor=gray92];
+    B1 -> B0 [label="0"];
+    B8 -> B0 [label="1"];
+    B2 -> B1;
+    B5 -> B1;
+    B3 -> B2;
+    B4 -> B3;
+    B4 -> B3;
+    B6 -> B5;
+    B7 -> B6;
+    B7 -> B6;
+    B9 -> B8;
+    B10 -> B8;
+    B4 -> B10 [label="0"];
+    B7 -> B10 [label="1"];
+  }
+}

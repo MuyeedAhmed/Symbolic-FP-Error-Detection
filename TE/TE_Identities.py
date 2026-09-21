@@ -315,9 +315,8 @@ def to_dot(a: Analysis, b: Analysis, difference: Optional[Tuple[Node, Node]], ti
 
 def compare(title: str, file_name: str, source_a: str, source_b: str, inputs: Dict[str, Type],
             label_a: str = "A (sklearn)", label_b: str = "B (cuML)", dot_directory: str = "dot"):
-    print("=" * 100)
-    print(f"  {title}")
-    print("=" * 100)
+    print("-" * 50)
+    print(f"{title}")
     a, b = analyse(source_a, inputs, label_a), analyse(source_b, inputs, label_b)
     print_analysis(a)
     print_analysis(b)
@@ -335,12 +334,25 @@ def compare(title: str, file_name: str, source_a: str, source_b: str, inputs: Di
     
     return a, b, difference
 
-input = dict(title="(A @ B) @ C vs A @ (B @ C)", file_name="Graph",
+input = dict(title="(A @ B) @ C vs A @ (B @ C)", file_name="Assoc",
          inputs={"A": float32("m", "k"), "B": float32("k", "l"), "C": float32("l", "n")},
          source_a="Z = (A @ B) @ C",
          source_b="Z = A @ (B @ C)")
+
+input2 = dict(title="Squared distance: sum((x - y)^2) vs ||x||^2 + ||y||^2 - 2 x.y", file_name="Dist",
+         inputs={"x": float32("n"), "y": float32("n")},
+         source_a="""
+             diff = x - y
+             d = np.sum(diff * diff)
+         """,
+         source_b="""
+             xx = gpu_sum(x * x)
+             yy = gpu_sum(y * y)
+             d = xx + yy - 2.0 * gpu_gemm(x, y)
+         """)
 
 
 if __name__ == "__main__":
     here = os.path.dirname(os.path.abspath(__file__))
     results = compare(**input, dot_directory=os.path.join(here, "dot"))
+    compare(**input2, dot_directory=os.path.join(here, "dot"))
